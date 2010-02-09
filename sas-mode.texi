@@ -1,0 +1,375 @@
+@c %**start of header
+@setfilename sas-mode
+@settitle SAS mode 
+@setchapternewpage off
+@c version: %W% %G%
+@c %**end of header
+
+@titlepage
+@title SAS Mode
+@subtitle A Emacs mode for SAS programming
+@subtitle $Date: 2001/06/07 $
+@sp 1
+@author Tom Cook (cook@@biostat.wisc.edu)
+@page
+@end titlepage
+
+@ifinfo
+@node Top, Introduction, (dir), (dir)
+@unnumbered SAS mode
+
+Current Version of SAS mode is 1.10.
+
+@end ifinfo
+
+
+@menu
+* Introduction::                Introduction
+* Indentation::                 SAS Indentation
+* Invoking::                    Invoking SAS
+* Motion::                      Motion Commands
+* Keybindings::                 Keybindings
+* Customization::               Customization
+* Hooks::                       sas-mode hooks
+* Font-lock::                   Font-lock support
+* Variables::                   Variables
+@end menu
+
+@node  Introduction, Indentation, Top, Top
+@comment  node-name,  next,  previous,  up
+@section Introduction
+
+This is the documentation for SAS mode, version 1.6, written by Tom Cook
+(cook@@biostat.wisc.edu).
+
+Texinfo file by Tony Rossini (arossini@@biostats.hmc.psu.edu or
+rossini@@hsph.harvard.edu), using Tom's doc-string.
+
+Fixed up by TDC 3/3/97.
+
+@node  Indentation, Invoking, Introduction, Top
+@comment  node-name,  next,  previous,  up
+@section SAS Indentation
+
+
+@kbd{TAB} indents the current line.  Usually the indentation of the
+current line is derived from the previous line.  If this line is not
+indented correctly, the wrong indentation could be propagated.  The
+function @code{indent-region} is useful for reindenting large sections
+of code.  @kbd{LFD} (@kbd{C-j}) breaks the current line and starts the
+following line with the correct indentation.
+
+  In order to work correctly, the following conventions (and maybe more)
+should be adhered to.  These conventions are not be unreasonable, and are
+probably good coding form.
+
+@enumerate
+@item
+Only one sas program statement per line.  (`;` should be the last non-white
+character on a given line.)
+@item
+While SAS seems to allow the use of keywords like PROC, DATA and DO as
+variable names their use may confuse sas-mode, especially if they appear at
+the beginning of a line.
+@item
+The strings \"%macro\", \"%do\", \"%end\", \"%mend\" may confuse the
+indentation commands if they are embedded in comments.  \"%do\" should be ok
+if NOT preceeded by white-space, while the others are only troublesome if
+they are the first non-white characters on a line.
+@item
+All data steps and proc steps should be followed by a run statement.  This
+convention is required to make macros indent properly.  Failure to adhere to
+this convention won't goof things up too much.  The function
+@code{sas-check-run-statements} can be used to check this.
+@item
+Comments contained between `/*' `*/' pairs will be indented as if they
+were ordinary statements except for the first, whose indentation will be
+uneffected.  Comments between `*' and `;' will be indented as if they
+were ordinary statements unless the beginning of the comment matches the
+variable @code{sas-indent-ignore-comment}.  Such comments will be
+ignored by the indentation commands.  The default value for
+@code{sas-indent-ignore-comment} is "*" (which is matched by all such
+comments) so unless this variable is changed, all comments of this type
+will be ignored.
+@end enumerate
+
+
+@node  Invoking, Motion, Indentation, Top
+@comment  node-name,  next,  previous,  up
+@section  Invoking SAS
+
+SAS programs can be submitted by running @code{submit-sas} (bound to
+@kbd{C-c C-l}).  A subregion of code can be submitted with
+@code{run-sas-on-region} (@kbd{C-c C-r}).  Moving between the .sas, .log
+and .lst files can be easily achieved with keys described below.
+
+Occasionally a SAS run will need intervention.  For example, when it is
+out of disk space.  If you notice that SAS have stopped running, but
+hasn't notified you, you may want to check the process buffer (usually
+@kbd{C-c C-c}).  This buffer is essentially a shell buffer so that you
+may interact with SAS as if you had submitted the job from the shell.
+Furthermore, if you want to terminate a job that is running, you may
+switch to the process buffer and type @kbd{C-c C-c}.
+
+The function @code{sas-get-dataset} (@kbd{C-c C-d}) prompts for the name of
+a sas dataset (as a system file including the .ssd01 extension) and produces
+a buffer containing the output from PROC CONTENTS and PROC PRINT for the
+given dataset.  You will be prompted for a string @code{sas-get-options} which is
+often useful for setting linesize, or restricting the number of records
+shown for a large file for example.  This variable has it's own history list
+so that previous values of this variable can be recalled with
+@kbd{M-p} and @kbd{M-n}.
+
+In the sas dataset buffer (*datsetname*), @kbd{C-c C-s}
+(switch-to-dataset-source-buffer) switches to a temporary source code
+buffer.  This code can be edited and re-executed by switching back to
+the dataset buffer and typing @kbd{C-c C-r} (@code{revert-sas-dataset}).
+@kbd{C-c C-s} (@code{switch-to-dataset-log-buffer}) switches to
+temporary log buffer.  The temporary source buffer does not have a
+special mode (no keybindings) and by default, has undo disabled.
+
+@node  Motion, Keybindings, Invoking, Top
+@comment  node-name,  next,  previous,  up
+@section Motion Commands
+
+
+There are three motion commands built into sas-mode:
+
+@itemize @bullet
+@item
+@kbd{C-c C-a} (@code{beginning-of-sas-statement}) @*
+Moves point to
+the beginning of the current statement.  This is useful for multi-line
+statements.  
+@item
+@kbd{M-C-a} (@code{beginning-of-sas-proc}) @*
+Moves point to the
+beginning of the current PROC or DATA step.
+@item
+@kbd{M-C-e} (@code{next-sas-proc})  @*
+Moves point to the beginning of the NEXT
+PROC or DATA step.
+@end itemize
+
+@node  Keybindings, Customization, Motion, Top
+@comment  node-name,  next,  previous,  up
+@section Keybindings
+
+@kbd{C-c C-l}             submit-sas
+
+@kbd{C-c C-r}             run-sas-on-region
+
+@kbd{C-c C-o}             switch-to-sas-lst
+
+@kbd{C-c 4 C-o}           switch-to-sas-lst-other-window
+
+@kbd{C-c C-t}             switch-to-sas-log
+
+@kbd{C-c 4 C-t}           switch-to-sas-log-other-window
+
+@kbd{C-c C-s}             switch-to-sas-source
+
+@kbd{C-c 4 C-s}           switch-to-sas-source-other-window
+
+@kbd{M-C-e}               next-sas-proc
+
+@kbd{M-C-a}               beginning-of-sas-proc
+
+@kbd{C-c C-a}             beginning-of-sas-statement
+
+@kbd{C-c C-c}             switch-to-sas-process-buffer
+
+@kbd{C-c C-d}             sas-get-dataset
+
+@kbd{TAB}                 indent-sas-statement
+
+
+@node Customization, Hooks, Keybindings, Top
+@comment  node-name,  next,  previous,  up
+@section Customization
+
+
+Customization can be achieved in several ways.
+
+@itemize @bullet
+@item
+Entry into sas-mode runs @code{sas-mode-hook} for source files.  Entry into
+sasl-mode runs @code{sasl-mode-hook} for .log and .lst files. 
+@item
+A number of variables ares listed below and can be set in .emacs using
+@code{setq}.
+@item
+ Alternate keybindings and other customizations can be placed in a file
+called .sas in your home directory.  The name of this file can be
+changed using the variable @code{sas-custom-file-name}.  (In .emacs)
+@end itemize
+
+@node Hooks, Font-lock, Customization, Top
+@comment  node-name,  next,  previous,  up
+@section sas-mode hooks
+
+There are four hooks available for sas mode.
+
+@defvr {User Option} sas-mode-hook
+Hook run when sas source file initially visited.
+@end defvr
+
+@defvr {User Option} sasl-mode-hook
+Hook run when sas lst (output) or log file initially visited.
+@end defvr
+
+@defvr {User Option} sasd-mode-hook
+Hook run when sas dataset is printed.
+@end defvr
+
+@defvr {User Option} sas-pre-run-hook
+Hook run each time a sas source file is submitted.
+@end defvr
+
+@node Font-lock, Variables, Hooks, Top
+@comment  node-name,  next,  previous,  up
+@section Font-lock support
+
+Sas.el supports font-lock-mode and creates two faces which are not part
+of the default @code{font-lock-face-attributes} list.  These are
+@code{font-lock-dataset-face} used for dataset and proc names, and
+@code{font-lock-macro-face} used for macro names and functions.  
+Use of font-lock-mode is determined by the variable
+@code{sas-use-fontlock}.  *Note Variables::
+
+@node Variables,  , Font-lock, Top
+@comment  node-name,  next,  previous,  up
+@section Variables
+
+Some customization variables (and their defaults) are as follows:
+
+@defvr {User Option} sas-indent-width
+Default: @code{4} @*
+The amount statements within data or proc steps, do loops, etc are indented.
+@end defvr
+
+@defvr {User Option} sas-indent-continue-width
+Default: @code{4} @*
+The amount continuation lines are indented.
+@end defvr
+
+@defvr {User Option} sas-require-confirmation
+Default: @code{t} @*
+`nil' means that when you use the sas-mode commands to switch buffers it
+will automatically update with the disk version.  The default value is t
+which means that emacs will ask if you want to visit the new version if
+it has changed.  (Typically after rerunning a sas program.)
+@end defvr
+
+@defvr {User Option} sas-notify
+Default: @code{t} @*
+hen you use @code{submit-sas} (@kbd{C-c C-l}) to run your sas program it
+runs in the "background" so that you can use emacs while it is
+running.  By default emacs will beep and generate a message upon
+completion.  Setting sas-notify to nil displays a process buffer
+(like shell-mode) and the notification takes place in that buffer,
+but emacs won't notify you when it's done.
+@end defvr
+
+@defvr {User Option} sas-error-notify
+Default: @code{t} @*
+By default, when sas-notify is `t' emacs will automatically reread the
+log file to see if there are any errors in it.  The message it gives you
+should indicate the presence of errors and switching to the log file
+will put you at the first error message.  If you don't want to
+automatically overwrite the old version of the log file, then set
+sas-error-notify to nil as above.
+@end defvr
+
+@defvr {User Option} sas-options-string
+Default: @code{""} @*
+This is a list of options that sas automatically runs when you submit
+with sas-mode as if you had typed them on the command line when you
+execute sas.  Putting
+@example
+(setq sas-options-string "-linesize 132 -noovp")
+@end example
+in your .emacs or .sas file is equivalent to running sas with
+@example
+sas -linesize 132 -noovp filename
+@end example
+@end defvr
+
+@defvr {User Option} sas-program
+Default: @code{sas} @*
+Name of the program which invokes SAS.  For example, if you want a
+different version of SAS, including the statement,
+@example
+(setq sas-program "sas607")
+@end example
+in .emacs or .sas will cause sas-mode to invoke sas607.
+@end defvr
+
+@defvr {User Option} sas-indent-ignore-comment
+Default: @code{*} @*
+If you want certain comments but not others to be ignored by indentation
+commands you can set this variable to a regular expression matched by
+such comments.  For example if sas-indent-ignore-comment is set to
+"*\*" (the second "*" needs the \ since it is part of a regular
+expression), then comments starting with "**" will be ignored while
+comments starting with a single "*" will be treated as ordinary
+comments.
+@end defvr
+
+@defvr {User Option} sas-notify-popup
+Default: @code{t} @*
+If t, and sas-notify is t, emacs creates a pop-up window when it has
+completed.  You must click the mouse in order to continue.
+@end defvr
+
+@defvr {User Option} sas-custom-file-name
+Default: @code{~/.sas} @*
+Name of file containing customization commands.  If you want to change
+this file name, it must be done BEFORE loading sas-mode, in ~/.emacs is
+preferable.  This file is loaded AFTER loading sas-mode, so any
+keybindings or functions may be redefined here without being changed by
+sas-mode.
+@end defvr
+
+@defvr {User Option} sas-submitable
+Default: @code{t} @*
+If nil, requires confirmation before executing with @code{submit-sas}.  This is
+useful for files which are not intended to be run on their own, but rather 
+using @code{%include} in another file.  This feature prevents the user from
+inadvertently submitting such a file.  This variable (as well as any others
+may be automatically set by inserting code like the following at the end of
+the file.
+@example
+* Local Variables: ;
+* sas-submitable: nil ;
+* End: ;
+page ;
+@end example
+The first three lines are SAS comments and will be ignored by SAS but
+used by emacs.  The @code{page ;} statement prevents emacs from getting fooled
+when the comments are echoed in the log file.
+@end defvr
+
+@defvr{User Option} sas-use-fontlock
+Default: @code{t} @*
+If t @code{font-lock-mode} will be used for source buffer.
+@end defvr
+
+@defvr{User Option} sas-flag-long-names
+If t (the default) and fontlock mode is used, names longer than 8
+characters will appear in font-lock-comment-face.  The downside is that
+words in strings, or valid SAS options which are longer than 8
+characters also get flagged.
+@end defvr
+
+@defvr{User Option} sas-electric-semi
+Default: @code{t} @*
+If t typing `;' will automatically indent current line, insert line feed
+and start next line at proper column.
+@end defvr
+
+@page
+@contents
+@bye
+
+
